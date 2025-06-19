@@ -220,7 +220,7 @@ export const Component: React.FC<LightningProps> = ({
         if (!gl) return;
         gl!.uniform2f(iResolutionLocation!, gl!.canvas.width, gl!.canvas.height);
         const currentTime = performance.now();
-        const iTimeValue = ((currentTime - startTime) % 15000) / 1000.0;
+        const iTimeValue = ((currentTime - startTime) % 5000) / 1000.0;
         gl!.uniform1f(iTimeLocation!, iTimeValue);
         gl!.uniform1f(uHueLocation!, hue);
         gl!.uniform1f(uXOffsetLocation!, xOffset);
