@@ -288,5 +288,19 @@ export const Component: React.FC<LightningProps> = ({
     };
   }, [hue, xOffset, speed, intensity, size]);
 
-  return <canvas ref={canvasRef} className="w-full h-full" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        width: '100vw',
+        height: '100vh',
+        display: 'block',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        pointerEvents: 'none',
+        zIndex: 1,
+      }}
+    />
+  );
 }; 
