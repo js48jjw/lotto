@@ -21,12 +21,14 @@ export const Component: React.FC<LightningProps> = ({
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
     const gl = canvas.getContext("webgl");
     if (!gl) {
       console.error("WebGL not supported in this browser.");
       return;
     }
+
+    let running = true;
 
     const resizeCanvas = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -204,31 +206,31 @@ export const Component: React.FC<LightningProps> = ({
     const startTime = performance.now();
     
     const renderLoop = () => {
-      if (!canvasRef.current || !gl || gl.isContextLost()) {
-        cancelAnimationFrame(animationFrameId);
+      if (!canvasRef.current || !gl || gl.isContextLost() || !running) {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
         return;
       }
-      
       gl.uniform2f(iResolutionLocation, gl.canvas.width, gl.canvas.height);
       const currentTime = performance.now();
-      gl.uniform1f(iTimeLocation, (currentTime - startTime) / 1000.0);
+      const iTimeValue = ((currentTime - startTime) % 3000) / 1000.0;
+      gl.uniform1f(iTimeLocation, iTimeValue);
       gl.uniform1f(uHueLocation, hue);
       gl.uniform1f(uXOffsetLocation, xOffset);
       gl.uniform1f(uSpeedLocation, speed);
       gl.uniform1f(uIntensityLocation, intensity);
       gl.uniform1f(uSizeLocation, size);
-      
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       animationFrameId = requestAnimationFrame(renderLoop);
     };
     
     resizeCanvas(); 
+    running = true;
     animationFrameId = requestAnimationFrame(renderLoop);
 
     return () => {
+      running = false;
       window.removeEventListener("resize", resizeCanvas);
-      cancelAnimationFrame(animationFrameId);
-      
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
       if (gl && !gl.isContextLost()) {
         gl.deleteProgram(program);
         gl.deleteShader(vertexShader);
