@@ -192,7 +192,7 @@ function App() {
         onClick={handleLightningTouch}
         style={{ cursor: lightningState === 'wait' ? 'pointer' : 'default' }}
       >
-        <div className="w-full h-full min-h-screen max-w-none max-h-none rounded-none shadow-none bg-black flex items-center justify-center mx-0 translate-x-[-5cm] sm:translate-x-0">
+        <div className="w-full h-full min-h-screen max-w-none max-h-none rounded-none shadow-none bg-black flex items-center justify-center mx-0">
           <Lightning hue={220} xOffset={0} speed={0.7} intensity={1.2} size={1.8} />
         </div>
         {lightningState === 'wait' && showTouchGuide && (
