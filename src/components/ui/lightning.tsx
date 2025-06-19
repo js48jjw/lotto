@@ -29,14 +29,21 @@ export const Component: React.FC<LightningProps> = ({
     }
 
     const resizeCanvas = () => {
+      const dpr = window.devicePixelRatio || 1;
+      let displayWidth = 0;
+      let displayHeight = 0;
       if (canvas.parentElement && canvas.parentElement.clientWidth > 0 && canvas.parentElement.clientHeight > 0) {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
+        displayWidth = canvas.parentElement.clientWidth;
+        displayHeight = canvas.parentElement.clientHeight;
       } else {
-        canvas.width = canvas.clientWidth || 300;
-        canvas.height = canvas.clientHeight || 150;
+        displayWidth = canvas.clientWidth || 300;
+        displayHeight = canvas.clientHeight || 150;
       }
-      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+      canvas.width = Math.round(displayWidth * dpr);
+      canvas.height = Math.round(displayHeight * dpr);
+      canvas.style.width = displayWidth + 'px';
+      canvas.style.height = displayHeight + 'px';
+      gl.viewport(0, 0, canvas.width, canvas.height);
     };
     
     window.addEventListener("resize", resizeCanvas);
