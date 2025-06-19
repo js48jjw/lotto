@@ -204,7 +204,7 @@ function App() {
           />
         </div>
         {lightningState === 'wait' && showTouchGuide && (
-          <div className="absolute bottom-6 sm:bottom-12 left-0 w-full text-center text-lg sm:text-xl animate-pulse pointer-events-none select-none px-2 font-bold drop-shadow-md">
+          <div className="absolute bottom-6 sm:bottom-12 left-0 w-full text-center text-xl sm:text-3xl animate-pulse pointer-events-none select-none px-2 font-bold drop-shadow-md text-white">
             화면을 터치하세요!
           </div>
         )}
