@@ -22,13 +22,13 @@ export const Component: React.FC<LightningProps> = ({
     if (!canvas) return;
 
     let animationFrameId: number | null = null;
-    const gl = canvas.getContext("webgl");
-    if (!gl) {
-      console.error("WebGL not supported in this browser.");
-      return;
-    }
-
+    let gl: WebGLRenderingContext | null = null;
     let running = true;
+    let program: WebGLProgram | null = null;
+    let vertexShader: WebGLShader | null = null;
+    let fragmentShader: WebGLShader | null = null;
+    let vertexBuffer: WebGLBuffer | null = null;
+    let renderLoop: () => void;
 
     const resizeCanvas = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -45,7 +45,7 @@ export const Component: React.FC<LightningProps> = ({
       canvas.height = Math.round(displayHeight * dpr);
       canvas.style.width = displayWidth + 'px';
       canvas.style.height = displayHeight + 'px';
-      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl!.viewport(0, 0, canvas.width, canvas.height);
     };
     
     window.addEventListener("resize", resizeCanvas);
@@ -138,105 +138,141 @@ export const Component: React.FC<LightningProps> = ({
     `;
 
     const compileShader = (source: string, type: number): WebGLShader | null => {
-      const shader = gl.createShader(type);
+      const shader = gl!.createShader(type);
       if (!shader) {
         console.error("Failed to create shader object.");
         return null;
       }
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        const shaderType = type === gl.VERTEX_SHADER ? "VERTEX" : "FRAGMENT";
-        console.error(`Shader compile error (${shaderType}):`, gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
+      gl!.shaderSource(shader, source);
+      gl!.compileShader(shader);
+      if (!gl!.getShaderParameter(shader, gl!.COMPILE_STATUS)) {
+        const shaderType = type === gl!.VERTEX_SHADER ? "VERTEX" : "FRAGMENT";
+        console.error(`Shader compile error (${shaderType}):`, gl!.getShaderInfoLog(shader));
+        gl!.deleteShader(shader);
         return null;
       }
       return shader;
     };
 
-    const vertexShader = compileShader(vertexShaderSource, gl.VERTEX_SHADER);
-    const fragmentShader = compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER);
-
-    if (!vertexShader || !fragmentShader) {
-      if (vertexShader) gl.deleteShader(vertexShader);
-      if (fragmentShader) gl.deleteShader(fragmentShader);
-      window.removeEventListener("resize", resizeCanvas);
-      return;
-    }
-
-    const program = gl.createProgram();
-    if (!program) {
-      console.error("Failed to create GL program.");
-      gl.deleteShader(vertexShader);
-      gl.deleteShader(fragmentShader);
-      window.removeEventListener("resize", resizeCanvas);
-      return;
-    }
-    gl.attachShader(program, vertexShader);
-    gl.attachShader(program, fragmentShader);
-    gl.linkProgram(program);
-
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-      console.error("Program linking error:", gl.getProgramInfoLog(program));
-      gl.deleteProgram(program);
-      gl.deleteShader(vertexShader);
-      gl.deleteShader(fragmentShader);
-      window.removeEventListener("resize", resizeCanvas);
-      return;
-    }
-    gl.useProgram(program);
-
-    const vertices = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]);
-    const vertexBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-
-    const aPosition = gl.getAttribLocation(program, "aPosition");
-    gl.enableVertexAttribArray(aPosition);
-    gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
-
-    const iResolutionLocation = gl.getUniformLocation(program, "iResolution");
-    const iTimeLocation = gl.getUniformLocation(program, "iTime");
-    const uHueLocation = gl.getUniformLocation(program, "uHue");
-    const uXOffsetLocation = gl.getUniformLocation(program, "uXOffset");
-    const uSpeedLocation = gl.getUniformLocation(program, "uSpeed");
-    const uIntensityLocation = gl.getUniformLocation(program, "uIntensity");
-    const uSizeLocation = gl.getUniformLocation(program, "uSize");
-
-    const startTime = performance.now();
-    
-    const renderLoop = () => {
-      if (!canvasRef.current || !gl || gl.isContextLost() || !running) {
-        if (animationFrameId) cancelAnimationFrame(animationFrameId);
-        return;
+    const initWebGL = () => {
+      gl = canvas.getContext("webgl");
+      if (!gl) {
+        console.error("WebGL not supported in this browser.");
+        return false;
       }
-      gl.uniform2f(iResolutionLocation, gl.canvas.width, gl.canvas.height);
-      const currentTime = performance.now();
-      const iTimeValue = ((currentTime - startTime) % 15000) / 1000.0;
-      gl.uniform1f(iTimeLocation, iTimeValue);
-      gl.uniform1f(uHueLocation, hue);
-      gl.uniform1f(uXOffsetLocation, xOffset);
-      gl.uniform1f(uSpeedLocation, speed);
-      gl.uniform1f(uIntensityLocation, intensity);
-      gl.uniform1f(uSizeLocation, size);
-      gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+      const vertexShader = compileShader(vertexShaderSource, gl!.VERTEX_SHADER);
+      const fragmentShader = compileShader(fragmentShaderSource, gl!.FRAGMENT_SHADER);
+
+      if (!vertexShader || !fragmentShader) {
+        if (vertexShader) gl!.deleteShader(vertexShader);
+        if (fragmentShader) gl!.deleteShader(fragmentShader);
+        window.removeEventListener("resize", resizeCanvas);
+        return false;
+      }
+
+      program = gl!.createProgram();
+      if (!program) {
+        console.error("Failed to create GL program.");
+        gl!.deleteShader(vertexShader);
+        gl!.deleteShader(fragmentShader);
+        window.removeEventListener("resize", resizeCanvas);
+        return false;
+      }
+      gl!.attachShader(program, vertexShader);
+      gl!.attachShader(program, fragmentShader);
+      gl!.linkProgram(program);
+
+      if (!gl!.getProgramParameter(program, gl!.LINK_STATUS)) {
+        console.error("Program linking error:", gl!.getProgramInfoLog(program));
+        gl!.deleteProgram(program);
+        gl!.deleteShader(vertexShader);
+        gl!.deleteShader(fragmentShader);
+        window.removeEventListener("resize", resizeCanvas);
+        return false;
+      }
+      gl!.useProgram(program);
+
+      const vertices = new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]);
+      vertexBuffer = gl!.createBuffer();
+      gl!.bindBuffer(gl!.ARRAY_BUFFER, vertexBuffer);
+      gl!.bufferData(gl!.ARRAY_BUFFER, vertices, gl!.STATIC_DRAW);
+
+      const aPosition = gl!.getAttribLocation(program, "aPosition");
+      gl!.enableVertexAttribArray(aPosition);
+      gl!.vertexAttribPointer(aPosition, 2, gl!.FLOAT, false, 0, 0);
+
+      const iResolutionLocation = gl!.getUniformLocation(program, "iResolution");
+      const iTimeLocation = gl!.getUniformLocation(program, "iTime");
+      const uHueLocation = gl!.getUniformLocation(program, "uHue");
+      const uXOffsetLocation = gl!.getUniformLocation(program, "uXOffset");
+      const uSpeedLocation = gl!.getUniformLocation(program, "uSpeed");
+      const uIntensityLocation = gl!.getUniformLocation(program, "uIntensity");
+      const uSizeLocation = gl!.getUniformLocation(program, "uSize");
+
+      const startTime = performance.now();
+      
+      renderLoop = () => {
+        if (!canvasRef.current || !gl || gl!.isContextLost() || !running) {
+          if (animationFrameId) cancelAnimationFrame(animationFrameId!);
+          return;
+        }
+        if (!gl) return;
+        gl!.uniform2f(iResolutionLocation!, gl!.canvas.width, gl!.canvas.height);
+        const currentTime = performance.now();
+        const iTimeValue = ((currentTime - startTime) % 15000) / 1000.0;
+        gl!.uniform1f(iTimeLocation!, iTimeValue);
+        gl!.uniform1f(uHueLocation!, hue);
+        gl!.uniform1f(uXOffsetLocation!, xOffset);
+        gl!.uniform1f(uSpeedLocation!, speed);
+        gl!.uniform1f(uIntensityLocation!, intensity);
+        gl!.uniform1f(uSizeLocation!, size);
+        gl!.drawArrays(gl!.TRIANGLES, 0, 6);
+        animationFrameId = requestAnimationFrame(renderLoop);
+      };
+      
+      resizeCanvas(); 
+      running = true;
       animationFrameId = requestAnimationFrame(renderLoop);
+      return true;
     };
-    
-    resizeCanvas(); 
-    running = true;
-    animationFrameId = requestAnimationFrame(renderLoop);
+
+    const cleanupWebGL = () => {
+      if (gl && !gl!.isContextLost()) {
+        if (program) gl!.deleteProgram(program);
+        if (vertexShader) gl!.deleteShader(vertexShader);
+        if (fragmentShader) gl!.deleteShader(fragmentShader);
+        if (vertexBuffer) gl!.deleteBuffer(vertexBuffer);
+      }
+      program = null;
+      vertexShader = null;
+      fragmentShader = null;
+      vertexBuffer = null;
+    };
+
+    const handleContextLost = (e: Event) => {
+      e.preventDefault();
+      running = false;
+      if (animationFrameId) cancelAnimationFrame(animationFrameId!);
+      cleanupWebGL();
+    };
+    const handleContextRestored = () => {
+      running = true;
+      if (initWebGL()) {
+        resizeCanvas();
+        animationFrameId = requestAnimationFrame(renderLoop);
+      }
+    };
+    canvas.addEventListener('webglcontextlost', handleContextLost, false);
+    canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
 
     return () => {
       running = false;
       window.removeEventListener("resize", resizeCanvas);
-      if (animationFrameId) cancelAnimationFrame(animationFrameId);
-      if (gl && !gl.isContextLost()) {
-        gl.deleteProgram(program);
-        gl.deleteShader(vertexShader);
-        gl.deleteShader(fragmentShader);
-        gl.deleteBuffer(vertexBuffer);
-      }
+      if (animationFrameId) cancelAnimationFrame(animationFrameId!);
+      cleanupWebGL();
+      canvas.removeEventListener('webglcontextlost', handleContextLost);
+      canvas.removeEventListener('webglcontextrestored', handleContextRestored);
     };
   }, [hue, xOffset, speed, intensity, size]);
 
