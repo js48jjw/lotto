@@ -154,7 +154,7 @@ export const Component: React.FC<LightningProps> = ({
       return shader;
     };
 
-    const initWebGL = () => {
+    const initWebGL = (onRenderLoop: (rl: () => void) => void): boolean => {
       gl = canvas.getContext("webgl");
       if (!gl) {
         console.error("WebGL not supported in this browser.");
@@ -234,6 +234,7 @@ export const Component: React.FC<LightningProps> = ({
       resizeCanvas(); 
       running = true;
       animationFrameId = requestAnimationFrame(renderLoop);
+      onRenderLoop(() => renderLoop);
       return true;
     };
 
@@ -258,13 +259,24 @@ export const Component: React.FC<LightningProps> = ({
     };
     const handleContextRestored = () => {
       running = true;
-      if (initWebGL()) {
+      let localRenderLoop: (() => void) | null = null;
+      const didInit = initWebGL((rl) => { localRenderLoop = rl; });
+      if (didInit && localRenderLoop) {
         resizeCanvas();
-        animationFrameId = requestAnimationFrame(renderLoop);
+        animationFrameId = requestAnimationFrame(localRenderLoop);
       }
     };
     canvas.addEventListener('webglcontextlost', handleContextLost, false);
     canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
+
+    // --- mount 시 반드시 initWebGL() 호출 ---
+    let localRenderLoop: (() => void) | null = null;
+    const didInit = initWebGL((rl) => { localRenderLoop = rl; });
+    if (didInit && localRenderLoop) {
+      resizeCanvas();
+      running = true;
+      animationFrameId = requestAnimationFrame(localRenderLoop);
+    }
 
     return () => {
       running = false;
