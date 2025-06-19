@@ -190,21 +190,23 @@ function App() {
   if (lightningState) {
     return (
       <div
-        className={`fixed inset-0 h-screen w-screen bg-black flex flex-col items-center justify-center z-50 transition-opacity duration-700 ${lightningFade ? 'opacity-0' : 'opacity-100'}`}
+        className={`fixed inset-0 min-h-screen w-full bg-black flex flex-col items-center justify-center z-50 transition-opacity duration-700 ${lightningFade ? 'opacity-0' : 'opacity-100'}`}
         onClick={handleLightningTouch}
         style={{ cursor: lightningState === 'wait' ? 'pointer' : 'default' }}
       >
-        <div className="w-full h-full min-h-screen max-w-none max-h-none rounded-none shadow-none bg-black flex items-center justify-center mx-0">
+        <div className="w-full h-full min-h-screen max-w-none max-h-none rounded-none shadow-none bg-black flex items-center justify-center mx-0 p-0">
           <Lightning
             hue={220}
-            xOffset={isMobile ? -0.25 : 0}
+            xOffset={isMobile ? 0 : 0}
             speed={0.7}
-            intensity={1.2}
-            size={isMobile ? 0.01 : 1.8}
+            intensity={isMobile ? 1.7 : 1.2}
+            size={isMobile ? 1.2 : 1.8}
           />
         </div>
         {lightningState === 'wait' && showTouchGuide && (
-          <div className="absolute bottom-12 left-0 w-full text-center text-white text-xl animate-pulse pointer-events-none select-none">화면을 터치하세요!</div>
+          <div className="absolute bottom-6 sm:bottom-12 left-0 w-full text-center text-lg sm:text-xl animate-pulse pointer-events-none select-none px-2 font-bold drop-shadow-md">
+            화면을 터치하세요!
+          </div>
         )}
       </div>
     )
