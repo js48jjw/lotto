@@ -193,7 +193,7 @@ function App() {
         style={{ cursor: lightningState === 'wait' ? 'pointer' : 'default' }}
       >
         <div className="w-full h-full flex flex-col items-center justify-center min-h-screen">
-          <div className="w-full max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl h-[70vh] min-h-[320px] max-h-[90vh] sm:h-[60vh] md:h-[55vh] lg:h-[50vh] rounded-lg overflow-hidden shadow-2xl bg-black flex items-center justify-center mx-auto px-2 sm:px-4">
+          <div className="w-full max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl h-[70vh] min-h-[320px] max-h-[90vh] sm:h-[60vh] md:h-[55vh] lg:h-[50vh] rounded-lg overflow-hidden shadow-2xl bg-black flex items-center justify-center mx-auto">
             <Lightning hue={220} xOffset={0} speed={0.7} intensity={1.2} size={1.8} />
           </div>
         </div>
