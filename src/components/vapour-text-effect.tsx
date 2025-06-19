@@ -345,7 +345,7 @@ export default function VaporizeTextCycle({
     return () => {
       resizeObserver.disconnect();
     };
-  }, [wrapperRef.current]);
+  }, [wrapperRef, texts, font, color, alignment, globalDpr, currentTextIndex]);
 
   // Initial size detection
   useEffect(() => {

@@ -51,7 +51,7 @@ function App() {
       audioRef.current.currentTime = 0.4;
       audioRef.current.play();
       finalTimeoutRef.current = setTimeout(() => {
-        const win = window as any;
+        const win = window as Window & { __finalAudio__?: HTMLAudioElement };
         if (!win.__finalAudio__) {
           win.__finalAudio__ = new Audio('/sound/Final.mp3');
         }
@@ -135,7 +135,7 @@ function App() {
       finalAudioRef.current.currentTime = 0;
     }
     if (typeof window !== 'undefined') {
-      const win = window as any;
+      const win = window as Window & { __finalAudio__?: HTMLAudioElement };
       if (win.__finalAudio__) {
         win.__finalAudio__.pause();
         win.__finalAudio__.currentTime = 0;
