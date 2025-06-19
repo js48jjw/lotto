@@ -192,10 +192,8 @@ function App() {
         onClick={handleLightningTouch}
         style={{ cursor: lightningState === 'wait' ? 'pointer' : 'default' }}
       >
-        <div className="w-full h-full flex flex-col items-center justify-center min-h-screen">
-          <div className="w-full max-w-xs sm:max-w-md md:max-w-xl lg:max-w-2xl h-[70vh] min-h-[320px] max-h-[90vh] sm:h-[60vh] md:h-[55vh] lg:h-[50vh] rounded-lg overflow-hidden shadow-2xl bg-black flex items-center justify-center mx-auto">
-            <Lightning hue={220} xOffset={0} speed={0.7} intensity={1.2} size={1.8} />
-          </div>
+        <div className="w-full h-full min-h-screen max-w-none max-h-none rounded-none shadow-none bg-black flex items-center justify-center mx-0">
+          <Lightning hue={220} xOffset={0} speed={0.7} intensity={1.2} size={1.8} />
         </div>
         {lightningState === 'wait' && showTouchGuide && (
           <div className="absolute bottom-12 left-0 w-full text-center text-white text-xl animate-pulse pointer-events-none select-none">화면을 터치하세요!</div>
