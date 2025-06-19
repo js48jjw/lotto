@@ -200,7 +200,7 @@ function App() {
             xOffset={isMobile ? -0.25 : 0}
             speed={0.7}
             intensity={1.2}
-            size={isMobile ? 1.0 : 1.8}
+            size={isMobile ? 0.4 : 1.8}
           />
         </div>
         {lightningState === 'wait' && showTouchGuide && (
