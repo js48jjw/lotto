@@ -97,40 +97,42 @@ function App() {
   const finalAudioRef = useRef<HTMLAudioElement | null>(null);
   const [showTouchGuide, setShowTouchGuide] = useState(false);
   const isMobile = useMediaQuery({ maxWidth: 639 });
+  const [adRenderKey, setAdRenderKey] = useState(Date.now());
 
+  // PWA에서 앱이 다시 활성화될 때 광고를 새로고침하기 위한 로직
   useEffect(() => {
-    const reloadAds = () => {
-      const scriptSrc = "//t1.daumcdn.net/kas/static/ba.min.js";
-      
-      const existingScript = document.querySelector(`script[src='${scriptSrc}']`);
-      if (existingScript) {
-        existingScript.remove();
-      }
-
-      const script = document.createElement("script");
-      script.src = scriptSrc;
-      script.async = true;
-      document.body.appendChild(script);
-    };
-
-    reloadAds();
-
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        reloadAds();
+        setAdRenderKey(Date.now());
       }
     };
-    
     document.addEventListener('visibilitychange', handleVisibilityChange);
-
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      const script = document.querySelector(`script[src='//t1.daumcdn.net/kas/static/ba.min.js']`);
-      if (script) {
-        script.remove();
-      }
     };
   }, []);
+
+  // adRenderKey가 변경될 때마다 광고 스크립트를 다시 로드
+  useEffect(() => {
+    const scriptSrc = "//t1.daumcdn.net/kas/static/ba.min.js";
+    
+    const existingScript = document.querySelector(`script[src='${scriptSrc}']`);
+    if (existingScript) {
+      existingScript.remove();
+    }
+
+    const script = document.createElement("script");
+    script.src = scriptSrc;
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      const scriptToRemove = document.querySelector(`script[src='${scriptSrc}']`);
+      if (scriptToRemove) {
+        scriptToRemove.remove();
+      }
+    };
+  }, [adRenderKey]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
@@ -423,13 +425,13 @@ function App() {
     <div className="relative w-full h-full min-h-screen">
       <div className="fixed top-0 left-0 w-full flex justify-center z-50 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-md">
-          <KakaoAdTop />
+          <KakaoAdTop key={`top-${adRenderKey}`} />
         </div>
       </div>
       {pageContent}
       <div className="fixed bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-md">
-          <KakaoAd />
+          <KakaoAd key={`bottom-${adRenderKey}`} />
         </div>
       </div>
     </div>
