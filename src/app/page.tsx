@@ -86,35 +86,27 @@ function App() {
   const [adRenderKey, setAdRenderKey] = useState(Date.now().toString());
   const [isAdVisible, setIsAdVisible] = useState(true);
 
-  // PWA가 다시 활성화될 때 광고를 소멸 후 재창조하는 통합 핸들러
-  const handleAppActivation = () => {
-    // 1. 광고 컴포넌트 소멸
-    setIsAdVisible(false);
-
-    // 2. 잠시 후, 새로운 키와 함께 재창조
-    setTimeout(() => {
-      setAdRenderKey(Date.now().toString());
-      setIsAdVisible(true);
-    }, 100); // 100ms 지연으로 안정성 확보
-  };
-
   useEffect(() => {
-    const visibilityChangeHandler = () => {
-      if (document.visibilityState === 'visible') {
-        handleAppActivation();
+    const handlePageShow = (event: PageTransitionEvent) => {
+      // `persisted` 속성은 페이지가 bfcache에서 복원되었을 때 true가 됩니다.
+      // 이것이 모바일 PWA 재실행을 감지하는 가장 확실한 신호입니다.
+      if (event.persisted) {
+        // 1. 광고 컴포넌트를 즉시 소멸시킵니다.
+        setIsAdVisible(false);
+
+        // 2. 다음 렌더링 사이클에서 재창조합니다.
+        setTimeout(() => {
+          setAdRenderKey(Date.now().toString());
+          setIsAdVisible(true);
+        }, 50); // DOM이 업데이트될 시간을 보장하기 위한 최소한의 지연
       }
     };
-    
-    // 모바일 환경을 위해 두 가지 이벤트를 모두 등록
-    window.addEventListener('visibilitychange', visibilityChangeHandler);
-    window.addEventListener('pageshow', handleAppActivation);
 
+    window.addEventListener('pageshow', handlePageShow);
     return () => {
-      // 이벤트 리스너 정리
-      window.removeEventListener('visibilitychange', visibilityChangeHandler);
-      window.removeEventListener('pageshow', handleAppActivation);
+      window.removeEventListener('pageshow', handlePageShow);
     };
-  }, []);
+  }, []); // 컴포넌트 마운트 시 단 한 번만 실행됩니다.
 
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
