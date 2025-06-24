@@ -36,21 +36,6 @@ function KakaoAd() {
     };
   }, []);
 
-  useEffect(() => {
-    if (show) {
-      // 이미 스크립트가 있으면 추가하지 않음
-      if (!document.querySelector('script[src="//t1.daumcdn.net/kas/static/ba.min.js"]')) {
-        const script = document.createElement("script");
-        script.src = "//t1.daumcdn.net/kas/static/ba.min.js";
-        script.async = true;
-        document.body.appendChild(script);
-        return () => {
-          document.body.removeChild(script);
-        };
-      }
-    }
-  }, [show]);
-
   if (!show) return null;
 
   return (
@@ -83,21 +68,6 @@ function KakaoAdTop() {
     };
   }, []);
 
-  useEffect(() => {
-    if (show) {
-      // 이미 스크립트가 있으면 추가하지 않음
-      if (!document.querySelector('script[src="//t1.daumcdn.net/kas/static/ba.min.js"]')) {
-        const script = document.createElement("script");
-        script.src = "//t1.daumcdn.net/kas/static/ba.min.js";
-        script.async = true;
-        document.body.appendChild(script);
-        return () => {
-          document.body.removeChild(script);
-        };
-      }
-    }
-  }, [show]);
-
   if (!show) return null;
 
   return (
@@ -129,6 +99,40 @@ function App() {
   const isMobile = useMediaQuery({ maxWidth: 639 });
 
   useEffect(() => {
+    const reloadAds = () => {
+      const scriptSrc = "//t1.daumcdn.net/kas/static/ba.min.js";
+      
+      const existingScript = document.querySelector(`script[src='${scriptSrc}']`);
+      if (existingScript) {
+        existingScript.remove();
+      }
+
+      const script = document.createElement("script");
+      script.src = scriptSrc;
+      script.async = true;
+      document.body.appendChild(script);
+    };
+
+    reloadAds();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        reloadAds();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      const script = document.querySelector(`script[src='//t1.daumcdn.net/kas/static/ba.min.js']`);
+      if (script) {
+        script.remove();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator.serviceWorker.register("/service-worker.js");
@@ -152,7 +156,7 @@ function App() {
         if (initAudioRef.current) {
           initAudioRef.current.pause();
         }
-      }, 29000); // 29초 후 정지
+      }, 28000); // 29초 후 정지
     } else {
       if (initAudioRef.current) {
         initAudioRef.current.pause();
