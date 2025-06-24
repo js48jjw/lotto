@@ -55,7 +55,7 @@ function AdFrame({ adUnit, adHeight, adKey }: { adUnit: string, adHeight: number
                 insTag.setAttribute('data-ad-onfail', 'kakaoAdFailCallback(this)');
             }
           </script>
-          <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async></script>
+          <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js?_=${adKey}" async></script>
         </body>
       </html>
     `);
