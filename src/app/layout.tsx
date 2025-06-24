@@ -32,6 +32,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+        {/* 개발 및 디버깅을 위한 Eruda 스크립트 (문제 해결 후 제거) */}
+        <script src="//cdn.jsdelivr.net/npm/eruda"></script>
+        <script>eruda.init();</script>
       </body>
     </html>
   );
