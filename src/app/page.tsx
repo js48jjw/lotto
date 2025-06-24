@@ -12,15 +12,26 @@ declare global {
     kakaoAdFailCallback?: (insTag: HTMLElement) => void;
     kakaoAdFailCallbackTop?: (insTag: HTMLElement) => void;
     __finalAudio__?: HTMLAudioElement;
+    adfit?: {
+      render: (adUnit: string) => void;
+    };
   }
 }
 
-function KakaoAd() {
+function KakaoAd({ adUnit }: { adUnit: string }) {
   const [show, setShow] = useState(false);
+  const adRef = useRef<HTMLModElement>(null);
 
   useEffect(() => {
     setShow(true);
   }, []);
+
+  // 컴포넌트가 보일 때 광고 렌더링 요청
+  useEffect(() => {
+    if (show && window.adfit) {
+      window.adfit.render(adUnit);
+    }
+  }, [show, adUnit]);
 
   // 광고 실패 콜백 등록
   useEffect(() => {
@@ -40,9 +51,10 @@ function KakaoAd() {
 
   return (
     <ins
+      ref={adRef}
       className="kakao_ad_area"
       style={{ display: "none", width: "100%" }}
-      data-ad-unit="DAN-u4HTiSfBj0E8sNUM"
+      data-ad-unit={adUnit}
       data-ad-width="320"
       data-ad-height="100"
       data-ad-onfail="kakaoAdFailCallback"
@@ -50,12 +62,20 @@ function KakaoAd() {
   );
 }
 
-function KakaoAdTop() {
+function KakaoAdTop({ adUnit }: { adUnit: string }) {
   const [show, setShow] = useState(false);
+  const adRef = useRef<HTMLModElement>(null);
 
   useEffect(() => {
     setShow(true);
   }, []);
+
+  // 컴포넌트가 보일 때 광고 렌더링 요청
+  useEffect(() => {
+    if (show && window.adfit) {
+      window.adfit.render(adUnit);
+    }
+  }, [show, adUnit]);
 
   useEffect(() => {
     window.kakaoAdFailCallbackTop = function(insTag: HTMLElement) {
@@ -72,9 +92,10 @@ function KakaoAdTop() {
 
   return (
     <ins
+      ref={adRef}
       className="kakao_ad_area"
       style={{ display: "none", width: "100%" }}
-      data-ad-unit="DAN-hS0Y5TF14lnK51lK"
+      data-ad-unit={adUnit}
       data-ad-width="320"
       data-ad-height="50"
       data-ad-onfail="kakaoAdFailCallbackTop"
@@ -112,15 +133,9 @@ function App() {
     };
   }, []);
 
-  // adRenderKey가 변경될 때마다 광고 스크립트를 다시 로드
+  // 최초 한 번만 광고 스크립트를 로드
   useEffect(() => {
     const scriptSrc = "//t1.daumcdn.net/kas/static/ba.min.js";
-    
-    const existingScript = document.querySelector(`script[src='${scriptSrc}']`);
-    if (existingScript) {
-      existingScript.remove();
-    }
-
     const script = document.createElement("script");
     script.src = scriptSrc;
     script.async = true;
@@ -129,10 +144,11 @@ function App() {
     return () => {
       const scriptToRemove = document.querySelector(`script[src='${scriptSrc}']`);
       if (scriptToRemove) {
-        scriptToRemove.remove();
+        // App 컴포넌트가 unmount될 때만 스크립트를 제거하도록 고려할 수 있으나,
+        // PWA에서는 보통 App이 unmount되지 않으므로 그냥 두어도 무방.
       }
     };
-  }, [adRenderKey]);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
@@ -425,13 +441,19 @@ function App() {
     <div className="relative w-full h-full min-h-screen">
       <div className="fixed top-0 left-0 w-full flex justify-center z-50 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-md">
-          <KakaoAdTop key={`top-${adRenderKey}`} />
+          <KakaoAdTop
+            key={`top-${adRenderKey}`}
+            adUnit="DAN-hS0Y5TF14lnK51lK"
+          />
         </div>
       </div>
       {pageContent}
       <div className="fixed bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-md">
-          <KakaoAd key={`bottom-${adRenderKey}`} />
+          <KakaoAd
+            key={`bottom-${adRenderKey}`}
+            adUnit="DAN-u4HTiSfBj0E8sNUM"
+          />
         </div>
       </div>
     </div>
