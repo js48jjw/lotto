@@ -86,24 +86,33 @@ function App() {
   const [adRenderKey, setAdRenderKey] = useState(Date.now().toString());
   const [isAdVisible, setIsAdVisible] = useState(true);
 
-  // PWA에서 앱이 다시 활성화될 때 광고를 소멸 후 재창조
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        // 1. 광고 컴포넌트 소멸
-        setIsAdVisible(false);
+  // PWA가 다시 활성화될 때 광고를 소멸 후 재창조하는 통합 핸들러
+  const handleAppActivation = () => {
+    // 1. 광고 컴포넌트 소멸
+    setIsAdVisible(false);
 
-        // 2. 잠시 후, 새로운 키와 함께 재창조
-        setTimeout(() => {
-          setAdRenderKey(Date.now().toString());
-          setIsAdVisible(true);
-        }, 100); // 100ms 지연으로 안정성 확보
+    // 2. 잠시 후, 새로운 키와 함께 재창조
+    setTimeout(() => {
+      setAdRenderKey(Date.now().toString());
+      setIsAdVisible(true);
+    }, 100); // 100ms 지연으로 안정성 확보
+  };
+
+  useEffect(() => {
+    const visibilityChangeHandler = () => {
+      if (document.visibilityState === 'visible') {
+        handleAppActivation();
       }
     };
+    
+    // 모바일 환경을 위해 두 가지 이벤트를 모두 등록
+    window.addEventListener('visibilitychange', visibilityChangeHandler);
+    window.addEventListener('pageshow', handleAppActivation);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // 이벤트 리스너 정리
+      window.removeEventListener('visibilitychange', visibilityChangeHandler);
+      window.removeEventListener('pageshow', handleAppActivation);
     };
   }, []);
 
