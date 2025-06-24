@@ -12,94 +12,66 @@ declare global {
     kakaoAdFailCallback?: (insTag: HTMLElement) => void;
     kakaoAdFailCallbackTop?: (insTag: HTMLElement) => void;
     __finalAudio__?: HTMLAudioElement;
-    adfit?: {
-      render: (adUnit: string) => void;
-    };
   }
 }
 
-function KakaoAd({ adUnit }: { adUnit: string }) {
-  const [show, setShow] = useState(false);
-  const adRef = useRef<HTMLModElement>(null);
+// 광고를 iframe 내에서 렌더링하는 컴포넌트
+function AdFrame({ adUnit, adHeight, adKey }: { adUnit: string, adHeight: number, adKey: string }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
-    setShow(true);
-  }, []);
+    const iframe = iframeRef.current;
+    if (!iframe) return;
 
-  // 컴포넌트가 보일 때 광고 렌더링 요청
-  useEffect(() => {
-    if (show && window.adfit) {
-      window.adfit.render(adUnit);
-    }
-  }, [show, adUnit]);
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
 
-  // 광고 실패 콜백 등록
-  useEffect(() => {
-    window.kakaoAdFailCallback = function(insTag: HTMLElement) {
-      // 광고 실패 시 동작 (예: 광고 영역 숨기기)
-      if (insTag && insTag.style) {
-        insTag.style.display = "none";
-      }
-      // 필요시 setShow(false) 등 추가 동작 가능
-    };
-    return () => {
-      delete window.kakaoAdFailCallback;
-    };
-  }, []);
+    // iframe을 재활용하기 위해 내용을 비움
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <style>
+            body { margin: 0; padding: 0; }
+            .kakao_ad_area { display: none; }
+          </style>
+        </head>
+        <body>
+          <ins
+            class="kakao_ad_area"
+            style="display:none; width:100%;"
+            data-ad-unit="${adUnit}"
+            data-ad-width="320"
+            data-ad-height="${adHeight}"
+          ></ins>
+          <script>
+            window.kakaoAdFailCallback = function(insTag) {
+              if (insTag && insTag.style) {
+                insTag.style.display = 'none';
+              }
+            };
+            const insTag = document.querySelector('.kakao_ad_area');
+            if (insTag) {
+                insTag.setAttribute('data-ad-onfail', 'kakaoAdFailCallback(this)');
+            }
+          </script>
+          <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async></script>
+        </body>
+      </html>
+    `);
+    doc.close();
 
-  if (!show) return null;
+  }, [adUnit, adHeight, adKey]); // adKey가 바뀔 때마다 iframe 내용을 다시 씀
 
   return (
-    <ins
-      ref={adRef}
-      className="kakao_ad_area"
-      style={{ display: "none", width: "100%" }}
-      data-ad-unit={adUnit}
-      data-ad-width="320"
-      data-ad-height="100"
-      data-ad-onfail="kakaoAdFailCallback"
-    ></ins>
-  );
-}
-
-function KakaoAdTop({ adUnit }: { adUnit: string }) {
-  const [show, setShow] = useState(false);
-  const adRef = useRef<HTMLModElement>(null);
-
-  useEffect(() => {
-    setShow(true);
-  }, []);
-
-  // 컴포넌트가 보일 때 광고 렌더링 요청
-  useEffect(() => {
-    if (show && window.adfit) {
-      window.adfit.render(adUnit);
-    }
-  }, [show, adUnit]);
-
-  useEffect(() => {
-    window.kakaoAdFailCallbackTop = function(insTag: HTMLElement) {
-      if (insTag && insTag.style) {
-        insTag.style.display = "none";
-      }
-    };
-    return () => {
-      delete window.kakaoAdFailCallbackTop;
-    };
-  }, []);
-
-  if (!show) return null;
-
-  return (
-    <ins
-      ref={adRef}
-      className="kakao_ad_area"
-      style={{ display: "none", width: "100%" }}
-      data-ad-unit={adUnit}
-      data-ad-width="320"
-      data-ad-height="50"
-      data-ad-onfail="kakaoAdFailCallbackTop"
-    ></ins>
+    <iframe
+      ref={iframeRef}
+      title={`ad-${adUnit}`}
+      width="320"
+      height={adHeight}
+      style={{ border: 'none', overflow: 'hidden' }}
+      scrolling="no"
+    />
   );
 }
 
@@ -118,35 +90,18 @@ function App() {
   const finalAudioRef = useRef<HTMLAudioElement | null>(null);
   const [showTouchGuide, setShowTouchGuide] = useState(false);
   const isMobile = useMediaQuery({ maxWidth: 639 });
-  const [adRenderKey, setAdRenderKey] = useState(Date.now());
+  const [adRenderKey, setAdRenderKey] = useState(Date.now().toString());
 
   // PWA에서 앱이 다시 활성화될 때 광고를 새로고침하기 위한 로직
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        setAdRenderKey(Date.now());
+        setAdRenderKey(Date.now().toString());
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  // 최초 한 번만 광고 스크립트를 로드
-  useEffect(() => {
-    const scriptSrc = "//t1.daumcdn.net/kas/static/ba.min.js";
-    const script = document.createElement("script");
-    script.src = scriptSrc;
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      const scriptToRemove = document.querySelector(`script[src='${scriptSrc}']`);
-      if (scriptToRemove) {
-        // App 컴포넌트가 unmount될 때만 스크립트를 제거하도록 고려할 수 있으나,
-        // PWA에서는 보통 App이 unmount되지 않으므로 그냥 두어도 무방.
-      }
     };
   }, []);
 
@@ -440,19 +395,21 @@ function App() {
   return (
     <div className="relative w-full h-full min-h-screen">
       <div className="fixed top-0 left-0 w-full flex justify-center z-50 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-md">
-          <KakaoAdTop
-            key={`top-${adRenderKey}`}
+        <div className="pointer-events-auto w-full max-w-md flex justify-center">
+          <AdFrame
             adUnit="DAN-hS0Y5TF14lnK51lK"
+            adHeight={50}
+            adKey={`top-${adRenderKey}`}
           />
         </div>
       </div>
       {pageContent}
       <div className="fixed bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none">
-        <div className="pointer-events-auto w-full max-w-md">
-          <KakaoAd
-            key={`bottom-${adRenderKey}`}
+        <div className="pointer-events-auto w-full max-w-md flex justify-center">
+          <AdFrame
             adUnit="DAN-u4HTiSfBj0E8sNUM"
+            adHeight={100}
+            adKey={`bottom-${adRenderKey}`}
           />
         </div>
       </div>
