@@ -15,55 +15,37 @@ declare global {
   }
 }
 
-// 광고를 iframe 내에서 렌더링하는 컴포넌트
-function AdFrame({ adUnit, adHeight, adKey }: { adUnit: string, adHeight: number, adKey: string }) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    
-    // 1. iframe을 완전히 빈 페이지로 만들어 이전 상태를 제거합니다.
-    iframe.src = 'about:blank';
-
-    // 2. 'about:blank'가 로드된 후 내용을 씁니다.
-    const timer = setTimeout(() => {
-      const doc = iframe.contentWindow?.document;
-      if (doc) {
-        doc.open();
-        doc.write(`
-          <html>
-            <head>
-              <style>body { margin: 0; padding: 0; }</style>
-            </head>
-            <body>
-              <ins
-                class="kakao_ad_area"
-                style="width:100%;"
-                data-ad-unit="${adUnit}"
-                data-ad-width="320"
-                data-ad-height="${adHeight}"
-              ></ins>
-              <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js?_=${adKey}" async></script>
-            </body>
-          </html>
-        `);
-        doc.close();
-      }
-    }, 50); // 50ms의 짧은 지연으로 안정성 확보
-
-    return () => clearTimeout(timer);
-
-  }, [adUnit, adHeight, adKey]); // adKey가 바뀔 때마다 이 로직 전체가 다시 실행됨
+// 광고를 iframe 내에서 렌더링하는 가장 단순한 컴포넌트
+function AdFrame({ adUnit, adHeight }: { adUnit: string, adHeight: number }) {
+  // 매번 새로운 시간값으로 캐시를 무력화
+  const cacheBuster = Date.now();
+  
+  const adHtml = `
+    <html>
+      <head>
+        <style>body { margin: 0; padding: 0; }</style>
+      </head>
+      <body>
+        <ins
+          class="kakao_ad_area"
+          style="width:100%;"
+          data-ad-unit="${adUnit}"
+          data-ad-width="320"
+          data-ad-height="${adHeight}"
+        ></ins>
+        <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js?_=${cacheBuster}" async></script>
+      </body>
+    </html>
+  `;
 
   return (
     <iframe
-      ref={iframeRef}
       title={`ad-${adUnit}`}
       width="320"
       height={adHeight}
       style={{ border: 'none', overflow: 'hidden' }}
       scrolling="no"
+      srcDoc={adHtml}
     />
   );
 }
@@ -83,30 +65,6 @@ function App() {
   const finalAudioRef = useRef<HTMLAudioElement | null>(null);
   const [showTouchGuide, setShowTouchGuide] = useState(false);
   const isMobile = useMediaQuery({ maxWidth: 639 });
-  const [adRenderKey, setAdRenderKey] = useState(Date.now().toString());
-  const [isAdVisible, setIsAdVisible] = useState(true);
-
-  useEffect(() => {
-    const handlePageShow = (event: PageTransitionEvent) => {
-      // `persisted` 속성은 페이지가 bfcache에서 복원되었을 때 true가 됩니다.
-      // 이것이 모바일 PWA 재실행을 감지하는 가장 확실한 신호입니다.
-      if (event.persisted) {
-        // 1. 광고 컴포넌트를 즉시 소멸시킵니다.
-        setIsAdVisible(false);
-
-        // 2. 다음 렌더링 사이클에서 재창조합니다.
-        setTimeout(() => {
-          setAdRenderKey(Date.now().toString());
-          setIsAdVisible(true);
-        }, 50); // DOM이 업데이트될 시간을 보장하기 위한 최소한의 지연
-      }
-    };
-
-    window.addEventListener('pageshow', handlePageShow);
-    return () => {
-      window.removeEventListener('pageshow', handlePageShow);
-    };
-  }, []); // 컴포넌트 마운트 시 단 한 번만 실행됩니다.
 
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
@@ -132,7 +90,7 @@ function App() {
         if (initAudioRef.current) {
           initAudioRef.current.pause();
         }
-      }, 28000); // 29초 후 정지
+      }, 29000); // 29초 후 정지
     } else {
       if (initAudioRef.current) {
         initAudioRef.current.pause();
@@ -399,25 +357,13 @@ function App() {
     <div className="relative w-full h-full min-h-screen">
       <div className="fixed top-0 left-0 w-full flex justify-center z-50 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-md flex justify-center">
-          {isAdVisible && (
-            <AdFrame
-              adUnit="DAN-hS0Y5TF14lnK51lK"
-              adHeight={50}
-              adKey={`top-${adRenderKey}`}
-            />
-          )}
+          <AdFrame adUnit="DAN-hS0Y5TF14lnK51lK" adHeight={50} />
         </div>
       </div>
       {pageContent}
       <div className="fixed bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-md flex justify-center">
-          {isAdVisible && (
-            <AdFrame
-              adUnit="DAN-u4HTiSfBj0E8sNUM"
-              adHeight={100}
-              adKey={`bottom-${adRenderKey}`}
-            />
-          )}
+          <AdFrame adUnit="DAN-u4HTiSfBj0E8sNUM" adHeight={100} />
         </div>
       </div>
     </div>
