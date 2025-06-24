@@ -84,17 +84,23 @@ function App() {
   const [showTouchGuide, setShowTouchGuide] = useState(false);
   const isMobile = useMediaQuery({ maxWidth: 639 });
   const [adRenderKey, setAdRenderKey] = useState(Date.now().toString());
+  const [isAdVisible, setIsAdVisible] = useState(true);
 
-  // PWA에서 앱이 다시 활성화될 때 광고를 새로고침하기 위한 로직
+  // PWA에서 앱이 다시 활성화될 때 광고를 소멸 후 재창조
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // 의도적인 지연을 통해 경합 조건을 회피합니다.
+        // 1. 광고 컴포넌트 소멸
+        setIsAdVisible(false);
+
+        // 2. 잠시 후, 새로운 키와 함께 재창조
         setTimeout(() => {
           setAdRenderKey(Date.now().toString());
-        }, 100); // 100ms 지연
+          setIsAdVisible(true);
+        }, 100); // 100ms 지연으로 안정성 확보
       }
     };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -392,21 +398,25 @@ function App() {
     <div className="relative w-full h-full min-h-screen">
       <div className="fixed top-0 left-0 w-full flex justify-center z-50 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-md flex justify-center">
-          <AdFrame
-            adUnit="DAN-hS0Y5TF14lnK51lK"
-            adHeight={50}
-            adKey={`top-${adRenderKey}`}
-          />
+          {isAdVisible && (
+            <AdFrame
+              adUnit="DAN-hS0Y5TF14lnK51lK"
+              adHeight={50}
+              adKey={`top-${adRenderKey}`}
+            />
+          )}
         </div>
       </div>
       {pageContent}
       <div className="fixed bottom-0 left-0 w-full flex justify-center z-50 pointer-events-none">
         <div className="pointer-events-auto w-full max-w-md flex justify-center">
-          <AdFrame
-            adUnit="DAN-u4HTiSfBj0E8sNUM"
-            adHeight={100}
-            adKey={`bottom-${adRenderKey}`}
-          />
+          {isAdVisible && (
+            <AdFrame
+              adUnit="DAN-u4HTiSfBj0E8sNUM"
+              adHeight={100}
+              adKey={`bottom-${adRenderKey}`}
+            />
+          )}
         </div>
       </div>
     </div>
