@@ -123,6 +123,7 @@ function App() {
   const finalTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const initAudioRef = useRef<HTMLAudioElement | null>(null);
+  const initAudioTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const finalAudioRef = useRef<HTMLAudioElement | null>(null);
   const [showTouchGuide, setShowTouchGuide] = useState(false);
   const isMobile = useMediaQuery({ maxWidth: 639 });
@@ -139,16 +140,34 @@ function App() {
     if (lightningState === 'wait') {
       if (!initAudioRef.current) {
         initAudioRef.current = new Audio('/sound/init.mp3');
-        initAudioRef.current.loop = true;
+        initAudioRef.current.loop = false;
       }
       initAudioRef.current.currentTime = 0;
       initAudioRef.current.play();
+
+      if (initAudioTimeoutRef.current) {
+        clearTimeout(initAudioTimeoutRef.current);
+      }
+      initAudioTimeoutRef.current = setTimeout(() => {
+        if (initAudioRef.current) {
+          initAudioRef.current.pause();
+        }
+      }, 29000); // 29초 후 정지
     } else {
       if (initAudioRef.current) {
         initAudioRef.current.pause();
         initAudioRef.current.currentTime = 0;
       }
+      if (initAudioTimeoutRef.current) {
+        clearTimeout(initAudioTimeoutRef.current);
+      }
     }
+
+    return () => {
+      if (initAudioTimeoutRef.current) {
+        clearTimeout(initAudioTimeoutRef.current);
+      }
+    };
   }, [lightningState]);
 
   useEffect(() => {
