@@ -19,36 +19,51 @@ declare global {
 function AdFrame({ adUnit, adHeight, adKey }: { adUnit: string, adHeight: number, adKey: string }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  const adHtml = `
-    <html>
-      <head>
-        <style>
-          body { margin: 0; padding: 0; }
-        </style>
-      </head>
-      <body>
-        <ins
-          class="kakao_ad_area"
-          style="width:100%;"
-          data-ad-unit="${adUnit}"
-          data-ad-width="320"
-          data-ad-height="${adHeight}"
-        ></ins>
-        <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js?_=${adKey}" async></script>
-      </body>
-    </html>
-  `;
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    
+    // 1. iframe을 완전히 빈 페이지로 만들어 이전 상태를 제거합니다.
+    iframe.src = 'about:blank';
+
+    // 2. 'about:blank'가 로드된 후 내용을 씁니다.
+    const timer = setTimeout(() => {
+      const doc = iframe.contentWindow?.document;
+      if (doc) {
+        doc.open();
+        doc.write(`
+          <html>
+            <head>
+              <style>body { margin: 0; padding: 0; }</style>
+            </head>
+            <body>
+              <ins
+                class="kakao_ad_area"
+                style="width:100%;"
+                data-ad-unit="${adUnit}"
+                data-ad-width="320"
+                data-ad-height="${adHeight}"
+              ></ins>
+              <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js?_=${adKey}" async></script>
+            </body>
+          </html>
+        `);
+        doc.close();
+      }
+    }, 50); // 50ms의 짧은 지연으로 안정성 확보
+
+    return () => clearTimeout(timer);
+
+  }, [adUnit, adHeight, adKey]); // adKey가 바뀔 때마다 이 로직 전체가 다시 실행됨
 
   return (
     <iframe
-      key={adKey}
       ref={iframeRef}
       title={`ad-${adUnit}`}
       width="320"
       height={adHeight}
       style={{ border: 'none', overflow: 'hidden' }}
       scrolling="no"
-      srcDoc={adHtml}
     />
   );
 }
@@ -74,7 +89,10 @@ function App() {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        setAdRenderKey(Date.now().toString());
+        // 의도적인 지연을 통해 경합 조건을 회피합니다.
+        setTimeout(() => {
+          setAdRenderKey(Date.now().toString());
+        }, 100); // 100ms 지연
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
