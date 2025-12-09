@@ -32,33 +32,6 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
-        {/* Left fixed banner (visible only on screens >= 1100px) */}
-        <a
-          href="https://pmioham9d3.sens.kr"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden min-[1100px]:flex fixed left-0 top-1/2 -translate-y-1/2 z-40 w-[160px]"
-        >
-          <img
-            src="/dbsense-banner-left.png"
-            alt="DBSense Left Banner"
-            className="block w-full h-auto"
-          />
-        </a>
-
-        {/* Right fixed banner (visible only on screens >= 1100px) */}
-        <a
-          href="https://ig8rt9xz3i.sens.kr"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="hidden min-[1100px]:flex fixed right-0 top-1/2 -translate-y-1/2 z-40 w-[160px]"
-        >
-          <img
-            src="/dbsense-banner-right.png"
-            alt="DBSense Right Banner"
-            className="block w-full h-auto"
-          />
-        </a>
       </body>
     </html>
   );
