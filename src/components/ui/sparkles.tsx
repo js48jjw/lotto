@@ -1,6 +1,5 @@
 "use client";
-import React, { useId } from "react";
-import { useEffect, useState } from "react";
+import React, { useId, useEffect, useState, memo, useCallback } from "react";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import type { Container, SingleOrMultiple } from "@tsparticles/engine";
 import { loadSlim } from "@tsparticles/slim";
@@ -18,7 +17,8 @@ type ParticlesProps = {
   particleColor?: string;
   particleDensity?: number;
 };
-export const SparklesCore = (props: ParticlesProps) => {
+
+export const SparklesCore = memo((props: ParticlesProps) => {
   const {
     id,
     className,
@@ -39,7 +39,7 @@ export const SparklesCore = (props: ParticlesProps) => {
   }, []);
   const controls = useAnimation();
 
-  const particlesLoaded = async (container?: Container) => {
+  const particlesLoaded = useCallback(async (container?: Container) => {
     if (container) {
       controls.start({
         opacity: 1,
@@ -48,7 +48,7 @@ export const SparklesCore = (props: ParticlesProps) => {
         },
       });
     }
-  };
+  }, [controls]);
 
   const generatedId = useId();
   return (
@@ -431,4 +431,4 @@ export const SparklesCore = (props: ParticlesProps) => {
       )}
     </motion.div>
   );
-}; 
+});

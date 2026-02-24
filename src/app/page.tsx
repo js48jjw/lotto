@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback, useMemo, memo } from 'react'
 import { SparklesCore } from "@/components/ui/sparkles";
 import { TextShimmer } from "@/components/ui/text-shimmer";
 import { Component as Lightning } from "@/components/ui/lightning";
@@ -15,12 +15,9 @@ declare global {
   }
 }
 
-// 광고를 iframe 내에서 렌더링하는 가장 단순한 컴포넌트
-function AdFrame({ adUnit, adHeight }: { adUnit: string, adHeight: number }) {
-  // 매번 새로운 시간값으로 캐시를 무력화
-  const cacheBuster = Date.now();
-  
-  const adHtml = `
+// Memoized AdFrame component to prevent unnecessary re-renders
+const AdFrame = memo(function AdFrame({ adUnit, adHeight }: { adUnit: string, adHeight: number }) {
+  const adHtml = useMemo(() => `
     <html>
       <head>
         <style>body { margin: 0; padding: 0; }</style>
@@ -33,10 +30,10 @@ function AdFrame({ adUnit, adHeight }: { adUnit: string, adHeight: number }) {
           data-ad-width="320"
           data-ad-height="${adHeight}"
         ></ins>
-        <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js?_=${cacheBuster}" async></script>
+        <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async></script>
       </body>
     </html>
-  `;
+  `, [adUnit, adHeight]);
 
   return (
     <iframe
@@ -48,32 +45,76 @@ function AdFrame({ adUnit, adHeight }: { adUnit: string, adHeight: number }) {
       srcDoc={adHtml}
     />
   );
-}
+});
+
+// Memoized number color function
+const getNumberColor = (number: number): string => {
+  if (number >= 1 && number <= 10) return 'bg-yellow-500'
+  if (number >= 11 && number <= 20) return 'bg-blue-500'
+  if (number >= 21 && number <= 30) return 'bg-red-500'
+  if (number >= 31 && number <= 40) return 'bg-gray-600'
+  if (number >= 41 && number <= 45) return 'bg-green-500'
+  return 'bg-gray-500'
+};
+
+// Memoized static configurations
+const SPARKLES_CONFIG = {
+  background: "transparent",
+  minSize: 0.6,
+  maxSize: 1.2,
+  particleDensity: 100,
+  particleColor: "#00FFFF",
+} as const;
+
+const LIGHTNING_CONFIG = {
+  hue: 220,
+  speed: 0.7,
+} as const;
+
+const LIGHTNING_MOBILE_CONFIG = {
+  intensity: 1.7,
+  size: 1.2,
+} as const;
+
+const LIGHTNING_DESKTOP_CONFIG = {
+  intensity: 1.2,
+  size: 1.8,
+} as const;
 
 function App() {
   const [started, setStarted] = useState(false)
-  const [lottoNumbers, setLottoNumbers] = useState<number[]>([])
-  const [bonusNumber, setBonusNumber] = useState<number | null>(null)
+  const [resultCount, setResultCount] = useState(1)
+  const [lottoResults, setLottoResults] = useState<{ numbers: number[]; bonus: number }[]>([])
   const [isGenerating, setIsGenerating] = useState(false)
   const [lightningState, setLightningState] = useState<null | 'wait' | 'active'>(null)
   const [lightningFade, setLightningFade] = useState(false)
+  const [showTouchGuide, setShowTouchGuide] = useState(false);
+
+  // Refs for cleanup
   const lightningTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const finalTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const initAudioRef = useRef<HTMLAudioElement | null>(null);
   const initAudioTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const finalAudioRef = useRef<HTMLAudioElement | null>(null);
-  const [showTouchGuide, setShowTouchGuide] = useState(false);
+
+  // Memoize media query to prevent re-computation on every render
   const isMobile = useMediaQuery({ maxWidth: 639 });
 
+  // Memoize lightning config based on device
+  const lightningConfig = useMemo(() => ({
+    ...LIGHTNING_CONFIG,
+    xOffset: 0,
+    ...(isMobile ? LIGHTNING_MOBILE_CONFIG : LIGHTNING_DESKTOP_CONFIG),
+  }), [isMobile]);
+
+  // Service worker registration (only once)
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/service-worker.js");
-      });
+      navigator.serviceWorker.register("/service-worker.js");
     }
   }, []);
 
+  // Init audio effect
   useEffect(() => {
     if (lightningState === 'wait') {
       if (!initAudioRef.current) {
@@ -90,7 +131,7 @@ function App() {
         if (initAudioRef.current) {
           initAudioRef.current.pause();
         }
-      }, 29000); // 29초 후 정지
+      }, 29000);
     } else {
       if (initAudioRef.current) {
         initAudioRef.current.pause();
@@ -108,6 +149,7 @@ function App() {
     };
   }, [lightningState]);
 
+  // Lightning active effect
   useEffect(() => {
     if (lightningState === 'active') {
       if (!audioRef.current) {
@@ -141,7 +183,7 @@ function App() {
     }
   }, [lightningState]);
 
-  // 번개화면 대기 진입 시 10초 후 안내 표시
+  // Touch guide effect
   useEffect(() => {
     let guideTimeout: NodeJS.Timeout | null = null;
     if (lightningState === 'wait') {
@@ -158,72 +200,68 @@ function App() {
     };
   }, [lightningState]);
 
-  const getNumberColor = (number: number) => {
-    if (number >= 1 && number <= 10) return 'bg-yellow-500'
-    if (number >= 11 && number <= 20) return 'bg-blue-500'
-    if (number >= 21 && number <= 30) return 'bg-red-500'
-    if (number >= 31 && number <= 40) return 'bg-gray-600'
-    if (number >= 41 && number <= 45) return 'bg-green-500'
-    return 'bg-gray-500'
-  }
-
-  const generateLottoNumbers = () => {
+  // Memoized number generator
+  const generateLottoNumbers = useCallback(() => {
     setIsGenerating(true)
     setTimeout(() => {
-      const numbers: number[] = []
-      while (numbers.length < 6) {
-        const num = Math.floor(Math.random() * 45) + 1
-        if (!numbers.includes(num)) {
-          numbers.push(num)
+      const results: { numbers: number[]; bonus: number }[] = []
+      for (let r = 0; r < resultCount; r++) {
+        const numbers: number[] = []
+        while (numbers.length < 6) {
+          const num = Math.floor(Math.random() * 45) + 1
+          if (!numbers.includes(num)) {
+            numbers.push(num)
+          }
         }
+        numbers.sort((a, b) => a - b)
+        let bonus: number
+        do {
+          bonus = Math.floor(Math.random() * 45) + 1
+        } while (numbers.includes(bonus))
+        results.push({ numbers, bonus })
       }
-      numbers.sort((a, b) => a - b)
-      let bonus: number
-      do {
-        bonus = Math.floor(Math.random() * 45) + 1
-      } while (numbers.includes(bonus))
-      setLottoNumbers(numbers)
-      setBonusNumber(bonus)
+      setLottoResults(results)
       setIsGenerating(false)
     }, 2000)
-  }
+  }, [resultCount]);
 
-  const handleStart = () => {
+  // Memoized handlers
+  const handleStart = useCallback(() => {
     setStarted(true)
     setLightningState('wait')
-  }
+  }, []);
 
-  const handleNewNumbers = () => {
-    if (finalAudioRef.current) {
-      finalAudioRef.current.pause();
-      finalAudioRef.current.currentTime = 0;
+  const handleNewNumbers = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
-    if (typeof window !== 'undefined') {
-      if (window.__finalAudio__) {
-        window.__finalAudio__.pause();
-        window.__finalAudio__.currentTime = 0;
-      }
+    if (typeof window !== 'undefined' && window.__finalAudio__) {
+      window.__finalAudio__.pause();
+      window.__finalAudio__.currentTime = 0;
     }
     setLightningState('wait')
-  }
+  }, []);
 
-  const handleLightningTouch = () => {
+  const handleLightningTouch = useCallback(() => {
     if (lightningState === 'wait' && showTouchGuide) {
       setLightningState('active')
     }
-  }
+  }, [lightningState, showTouchGuide]);
+
+  // Memoized result options
+  const resultOptions = useMemo(() => [1, 2, 3, 4, 5], []);
+
+  // Memoized loading spinner keys
+  const loadingKeys = useMemo(() => [...Array(6)].map((_, i) => i), []);
 
   let pageContent: React.ReactNode;
   if (!started) {
     pageContent = (
       <div className="fixed inset-0 h-screen w-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 overflow-hidden flex items-center justify-center">
         <SparklesCore
-          background="transparent"
-          minSize={0.6}
-          maxSize={1.2}
-          particleDensity={100}
+          {...SPARKLES_CONFIG}
           className="absolute inset-0 w-full h-full z-0"
-          particleColor="#00FFFF"
         />
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-10">
           <div className="w-64 sm:w-96 h-24 sm:h-32 bg-cyan-400 opacity-30 blur-3xl"></div>
@@ -238,6 +276,23 @@ function App() {
           <p className="text-base sm:text-xl text-gray-400 mb-6 sm:mb-12 font-light">
             당신의 행운, 지금 만나요~
           </p>
+          <div className="mb-6">
+            <label htmlFor="resultCount" className="text-gray-300 text-sm sm:text-lg mr-3">
+              결과 개수:
+            </label>
+            <select
+              id="resultCount"
+              value={resultCount}
+              onChange={(e) => setResultCount(Number(e.target.value))}
+              className="bg-gray-800 text-white border border-gray-600 rounded-lg py-2 px-4 text-sm sm:text-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            >
+              {resultOptions.map((num) => (
+                <option key={num} value={num}>
+                  {num}개
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             onClick={handleStart}
             className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-400 hover:to-blue-400 text-white font-semibold py-3 px-8 sm:py-4 sm:px-10 rounded-lg text-lg sm:text-xl transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-cyan-500/25 w-full max-w-xs mx-auto"
@@ -255,13 +310,7 @@ function App() {
         style={{ cursor: lightningState === 'wait' ? 'pointer' : 'default' }}
       >
         <div className="w-full h-full min-h-screen max-w-none max-h-none rounded-none shadow-none bg-black flex items-center justify-center mx-0 p-0">
-          <Lightning
-            hue={220}
-            xOffset={isMobile ? 0 : 0}
-            speed={0.7}
-            intensity={isMobile ? 1.7 : 1.2}
-            size={isMobile ? 1.2 : 1.8}
-          />
+          <Lightning {...lightningConfig} />
         </div>
         {lightningState === 'wait' && showTouchGuide && (
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full text-center text-5xl sm:text-7xl animate-pulse pointer-events-none select-none px-2 font-bold drop-shadow-md text-white z-20">
@@ -289,7 +338,7 @@ function App() {
                   번호를 생성하는 중...
                 </TextShimmer>
                 <div className="flex flex-nowrap justify-center items-center gap-2 sm:gap-4 px-2 w-auto overflow-x-visible mt-12">
-                  {[...Array(6)].map((_, i) => (
+                  {loadingKeys.map((i) => (
                     <div
                       key={i}
                       className="w-9 h-9 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center animate-spin"
@@ -302,34 +351,33 @@ function App() {
               </>
             ) : (
               <>
-                <div className="text-2xl sm:text-4xl text-purple-300 mb-2 font-semibold">🍀 부자되세요~ 🍀</div>
-                <div className="flex flex-nowrap justify-center items-center gap-2 sm:gap-4 px-2 w-auto overflow-x-visible mt-12">
-                  {lottoNumbers.map((number, index) => (
-                    <div
-                      key={index}
-                      className={`w-9 h-9 sm:w-12 sm:h-12 ${getNumberColor(number)} rounded-full flex items-center justify-center text-sm sm:text-lg font-bold text-white shadow-2xl transform hover:scale-110 transition-all duration-300 animate-bounce border-2 border-white relative`}
-                      style={{ 
-                        animationDelay: `${index * 0.2}s`,
-                        background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent 50%), ${getNumberColor(number).replace('bg-', 'rgb(')})`,
-                        boxShadow: 'inset -2px -2px 8px rgba(0,0,0,0.3), inset 2px 2px 8px rgba(255,255,255,0.3), 0 8px 16px rgba(0,0,0,0.3)'
-                      }}
-                    >
-                      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent"></div>
-                      <span className="relative z-10">{number}</span>
+                <div className="text-2xl sm:text-4xl text-purple-300 mb-4 sm:mb-6 font-semibold">🍀 부자되세요~ 🍀</div>
+                <div className="flex flex-col gap-4 sm:gap-6 w-full max-w-md mx-auto">
+                  {lottoResults.map((result, resultIndex) => (
+                    <div key={resultIndex} className="flex flex-nowrap justify-center items-center gap-2 sm:gap-3 px-2 w-auto mx-auto">
+                      <span className="text-white text-sm sm:text-lg font-bold mr-2">{resultIndex + 1}.</span>
+                      {result.numbers.map((number, index) => (
+                        <div
+                          key={index}
+                          className={`w-8 h-8 sm:w-10 sm:h-10 ${getNumberColor(number)} rounded-full flex items-center justify-center text-xs sm:text-base font-bold text-white shadow-lg transform hover:scale-110 transition-all duration-300 border border-white relative`}
+                          style={{ 
+                            background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent 50%), ${getNumberColor(number).replace('bg-', 'rgb(')})`,
+                          }}
+                        >
+                          <span className="relative z-10">{number}</span>
+                        </div>
+                      ))}
+                      <div className="text-white text-lg sm:text-xl font-bold mx-1">+</div>
+                      <div
+                        className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-950 rounded-full flex items-center justify-center text-xs sm:text-base font-bold text-white shadow-lg border border-white relative"
+                        style={{ 
+                          background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent 50%), rgb(23, 37, 84)',
+                        }}
+                      >
+                        <span className="relative z-10">{result.bonus}</span>
+                      </div>
                     </div>
                   ))}
-                  <div className="text-white text-2xl sm:text-3xl font-bold mx-2 sm:mx-4">+</div>
-                  <div
-                    className="w-9 h-9 sm:w-12 sm:h-12 bg-blue-950 rounded-full flex items-center justify-center text-sm sm:text-lg font-bold text-white shadow-2xl transform hover:scale-110 transition-all duration-300 animate-bounce border-2 border-white relative"
-                    style={{ 
-                      animationDelay: '1.4s',
-                      background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.4), transparent 50%), rgb(23, 37, 84)',
-                      boxShadow: 'inset -2px -2px 8px rgba(0,0,0,0.3), inset 2px 2px 8px rgba(255,255,255,0.3), 0 8px 16px rgba(0,0,0,0.3)'
-                    }}
-                  >
-                    <div className="absolute inset-0 rounded-full bg-gradient-to-br from-white/20 to-transparent"></div>
-                    <span className="relative z-10">{bonusNumber}</span>
-                  </div>
                 </div>
               </>
             )}
@@ -371,12 +419,5 @@ function App() {
 }
 
 export default function Page() {
-  useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("/service-worker.js");
-      });
-    }
-  }, []);
   return <App />;
 }

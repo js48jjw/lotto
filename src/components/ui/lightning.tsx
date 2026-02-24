@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useEffect, memo, useMemo } from "react";
 
 interface LightningProps {
   hue?: number;
@@ -8,7 +8,18 @@ interface LightningProps {
   size?: number;
 }
 
-export const Component: React.FC<LightningProps> = ({
+// Custom comparison to prevent unnecessary re-renders
+const arePropsEqual = (prev: LightningProps, next: LightningProps): boolean => {
+  return (
+    prev.hue === next.hue &&
+    prev.xOffset === next.xOffset &&
+    prev.speed === next.speed &&
+    prev.intensity === next.intensity &&
+    prev.size === next.size
+  );
+};
+
+export const Component: React.FC<LightningProps> = memo(({
   hue = 230,
   xOffset = 0,
   speed = 1,
@@ -303,4 +314,4 @@ export const Component: React.FC<LightningProps> = ({
       }}
     />
   );
-}; 
+}, arePropsEqual);
