@@ -30,7 +30,7 @@ const AdFrame = memo(function AdFrame({ adUnit, adHeight }: { adUnit: string, ad
           data-ad-width="320"
           data-ad-height="${adHeight}"
         ></ins>
-        <script type="text/javascript" src="//t1.daumcdn.net/kas/static/ba.min.js" async></script>
+        <script type="text/javascript" src="//t1.kakaocdn.net/kas/static/ba.min.js" async></script>
       </body>
     </html>
   `, [adUnit, adHeight]);
